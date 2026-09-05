@@ -208,6 +208,7 @@ USBD_CUSTOM_HID_ItfTypeDef USBD_CustomHID_fops_FS =
 static int8_t CUSTOM_HID_Init_FS(void)
 {
   /* USER CODE BEGIN 4 */
+	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
   return (USBD_OK);
   /* USER CODE END 4 */
 }
@@ -219,6 +220,7 @@ static int8_t CUSTOM_HID_Init_FS(void)
 static int8_t CUSTOM_HID_DeInit_FS(void)
 {
   /* USER CODE BEGIN 5 */
+	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
   return (USBD_OK);
   /* USER CODE END 5 */
 }
