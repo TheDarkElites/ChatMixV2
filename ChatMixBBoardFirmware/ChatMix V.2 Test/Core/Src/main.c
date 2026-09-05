@@ -22,7 +22,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "deviceState.h"
+#include "usbd_custom_hid_if.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,6 +45,11 @@
 ADC_HandleTypeDef hadc;
 
 /* USER CODE BEGIN PV */
+volatile bool muteFlag = false;
+volatile bool modeFlag = false;
+
+//Report Buffer
+uint8_t reportBuffer[3];
 
 /* USER CODE END PV */
 
@@ -100,9 +106,32 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	HAL_Delay(500);
-	HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+
     /* USER CODE BEGIN 3 */
+	  //skip loop if recent report is not dirty
+	  if(!(muteFlag || modeFlag)) {continue;}
+
+	  //update internal state variables
+	  if(muteFlag)
+	  {
+		  muteFlag = false;
+		  isMuted = !isMuted;
+	  }
+	  if(modeFlag)
+	  {
+		  modeFlag = false;
+		  isModeAlternate = !isModeAlternate;
+	  }
+
+	  //build report in buffer
+	  reportBuffer[0] = 1;
+	  reportBuffer[1] = 0; //Put pot reading here once implemented
+
+	  reportBuffer[2] = 0; //First clear
+	  reportBuffer[2] |= isMuted;
+	  reportBuffer[2] |= isModeAlternate << 1;
+
+	  USBD_CUSTOM_HID_SendReport_FS(reportBuffer, 3);
   }
   /* USER CODE END 3 */
 }
@@ -243,8 +272,8 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : Mute_Int_Pin Mode_Int_Pin */
   GPIO_InitStruct.Pin = Mute_Int_Pin|Mode_Int_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LED_Pin */
@@ -258,12 +287,28 @@ static void MX_GPIO_Init(void)
   HAL_NVIC_SetPriority(EXTI0_1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI0_1_IRQn);
 
+  HAL_NVIC_SetPriority(EXTI2_3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI2_3_IRQn);
+
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	switch (GPIO_Pin)
+	{
+	case (Mute_Int_Pin):
+			muteFlag = true;
+	break;
+	case (Mode_Int_Pin):
+			modeFlag = true;
+	break;
+	}
+}
+
 
 /* USER CODE END 4 */
 

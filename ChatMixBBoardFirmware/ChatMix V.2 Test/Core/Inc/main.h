@@ -64,6 +64,7 @@ void Error_Handler(void);
 #define Mute_Int_EXTI_IRQn EXTI0_1_IRQn
 #define Mode_Int_Pin GPIO_PIN_2
 #define Mode_Int_GPIO_Port GPIOC
+#define Mode_Int_EXTI_IRQn EXTI2_3_IRQn
 #define LED_Pin GPIO_PIN_5
 #define LED_GPIO_Port GPIOA
 
