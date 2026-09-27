@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "deviceState.h"
 #include "usbd_custom_hid_if.h"
+#include "math_util.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,6 +48,7 @@ ADC_HandleTypeDef hadc;
 /* USER CODE BEGIN PV */
 volatile bool muteFlag = false;
 volatile bool modeFlag = false;
+volatile bool potFlag = false;
 
 //Report Buffer
 uint8_t reportBuffer[3];
@@ -98,7 +100,7 @@ int main(void)
   MX_ADC_Init();
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_ADC_Start(&hadc);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -109,7 +111,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  //skip loop if recent report is not dirty
-	  if(!(muteFlag || modeFlag)) {continue;}
+	  if(!(muteFlag || modeFlag || potFlag)) {continue;}
 
 	  //update internal state variables
 	  if(muteFlag)
@@ -122,10 +124,29 @@ int main(void)
 		  modeFlag = false;
 		  isModeAlternate = !isModeAlternate;
 	  }
+	  if(potFlag)
+	  {
+		  potFlag = false;
+
+		  //Update watchdog parameters
+
+		  ADC_AnalogWDGConfTypeDef AnalogWDGConfig = {0};
+		  AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_SINGLE_REG;
+		  AnalogWDGConfig.Channel = ADC_CHANNEL_10;
+		  AnalogWDGConfig.ITMode = ENABLE;
+		  AnalogWDGConfig.HighThreshold = MIN(potReading + ADC_WATCHDOG_OFFSET, 4095);
+		  AnalogWDGConfig.LowThreshold = MAX(potReading - ADC_WATCHDOG_OFFSET, 0);
+		  HAL_ADC_Stop(&hadc);
+		  if (HAL_ADC_AnalogWDGConfig(&hadc, &AnalogWDGConfig) != HAL_OK)
+		  {
+		    Error_Handler();
+		  }
+		  HAL_ADC_Start(&hadc);
+	  }
 
 	  //build report in buffer
 	  reportBuffer[0] = 1;
-	  reportBuffer[1] = 0; //Put pot reading here once implemented
+	  reportBuffer[1] = map(potReading, 0, 4095, 0, 255); //Pot reading
 
 	  reportBuffer[2] = 0; //First clear
 	  reportBuffer[2] |= isMuted;
@@ -238,7 +259,7 @@ static void MX_ADC_Init(void)
   AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_SINGLE_REG;
   AnalogWDGConfig.Channel = ADC_CHANNEL_10;
   AnalogWDGConfig.ITMode = ENABLE;
-  AnalogWDGConfig.HighThreshold = 0;
+  AnalogWDGConfig.HighThreshold = ADC_WATCHDOG_OFFSET;
   AnalogWDGConfig.LowThreshold = 0;
   if (HAL_ADC_AnalogWDGConfig(&hadc, &AnalogWDGConfig) != HAL_OK)
   {
@@ -307,6 +328,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 			modeFlag = true;
 	break;
 	}
+}
+
+void HAL_ADC_LevelOutOfWindowCallback(ADC_HandleTypeDef* hadc)
+{
+	potReading = HAL_ADC_GetValue(hadc);
+	potFlag = true;
 }
 
 

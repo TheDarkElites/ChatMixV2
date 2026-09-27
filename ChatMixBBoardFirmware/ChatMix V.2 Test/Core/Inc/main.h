@@ -71,6 +71,7 @@ void Error_Handler(void);
 /* USER CODE BEGIN Private defines */
 
 #define USBD_CUSTOMHID_REPORT_BUFFER_EVENT_ENABLED 1
+#define ADC_WATCHDOG_OFFSET 100
 
 /* USER CODE END Private defines */
 

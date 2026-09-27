@@ -15,6 +15,6 @@ volatile bool isMuted = false;
 //Is our device mode or alternate
 volatile bool isModeAlternate = false;
 //Current potentiometer reading of device
-volatile uint8_t potReading;
+volatile uint16_t potReading;
 
 #endif /* SRC_DEVICESTATE_H_ */
