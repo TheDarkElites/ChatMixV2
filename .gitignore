@@ -95,4 +95,4 @@ TouchGFX/simulator/msvs/.vs
 *.bak
 
 # Clion
-.idea/*
+.idea/
